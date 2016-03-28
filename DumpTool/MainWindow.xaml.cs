@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using DumpTool.Data;
 
 namespace DumpTool
 {
@@ -24,7 +25,7 @@ namespace DumpTool
     {
         public static List<Tuple<string, string>> _fullList = new List<Tuple<string, string>>();
         public static List<Tuple<string, string>> _regionList = new List<Tuple<string, string>>();
-        Dictionary<string, List<Tuple<string, string>>> _approxCountryBuckets = new Dictionary<string, List<Tuple<string, string>>>();
+        Dictionary<string, List<Tuple<string, string>>> _regionListDataSource = new Dictionary<string, List<Tuple<string, string>>>();
         public MainWindow()
         {
             DataContext = this;
@@ -33,51 +34,15 @@ namespace DumpTool
         }
         private void PartitionByLocation()
         {
-            
-
-            foreach (var item in _fullList)
-            {
-                string [] afterAt = item.Item1.Split('@');
-                if (afterAt.Length > 2)
-                    continue;
-                string[] tlds = afterAt[afterAt.Length - 1].Split('.');
-                string tldKey = "";
-                if (tlds.Length == 2)
-                    tldKey = $".{tlds[1]}";
-                if (tlds.Length == 3)
-                    tldKey = $".{tlds[1]}.{tlds[2]}";
-
-                if ((tlds.Length < 2)||(tlds.Length > 3))
-                    continue;
-                if ((tldKey == "") || String.IsNullOrWhiteSpace(item.Item2))
-                    continue;
-
-                if (_approxCountryBuckets.ContainsKey(tldKey))
-                    _approxCountryBuckets[tldKey].Add(item);
-                else
-                {
-                    _approxCountryBuckets.Add(tldKey, new List<Tuple<string, string>>());
-                    _approxCountryBuckets[tldKey].Add(item);
-                }
-
-                RegionCountLab.Text = $"TLDs: {_approxCountryBuckets.Count}";
-            }
-
-            List<string> tldKeys = _approxCountryBuckets.Keys.ToList();
-            tldKeys.Sort();
-
-            var approxCountryBucketsSorted = new Dictionary<string, List<Tuple<string, string>>>();
-
-            foreach (var item in tldKeys)
-                approxCountryBucketsSorted.Add(item, _approxCountryBuckets[item]);
-
-            RegionListBox.ItemsSource = approxCountryBucketsSorted;
+            _regionListDataSource = EplDataFunctions.SortedTldBucketDictionary(_fullList);
+            RegionCountLab.Text = $"TLDs: {_regionListDataSource.Keys.Count}";
+            RegionListBox.ItemsSource = _regionListDataSource;
         }
 
         private void RegionListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (RegionListBox.SelectedValue != null)
-                _regionList = _approxCountryBuckets[(string)RegionListBox.SelectedValue];
+                _regionList = _regionListDataSource[(string)RegionListBox.SelectedValue];
             CredsByRegionListBox.ItemsSource = _regionList;
         }
 
@@ -85,7 +50,7 @@ namespace DumpTool
         {
             Dictionary<string, List<Tuple<string, string>>> updatedDict = new Dictionary<string, List<Tuple<string, string>>>();
             List<string> keyList = new List<string>();
-            foreach (var key in _approxCountryBuckets.Keys)
+            foreach (var key in _regionListDataSource.Keys)
             {
                 if (key.Contains(searchTextBox.Text.ToLower()))
                     keyList.Add(key);
@@ -93,7 +58,7 @@ namespace DumpTool
             keyList.Sort();
             foreach (var key in keyList)
             {
-                updatedDict.Add(key, _approxCountryBuckets[key]);
+                updatedDict.Add(key, _regionListDataSource[key]);
             }
             RegionListBox.ItemsSource = updatedDict;
         }
@@ -111,6 +76,8 @@ namespace DumpTool
         }
         private void LoadCommand_Executed(object sender, ExecutedRoutedEventArgs e)
         {
+            //TODO: Create data functions to determine the filetype/format
+            //TODO: Move file load logic to respective filetype data functions
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == true)
                 pathLabel.Content = openFileDialog.FileName;

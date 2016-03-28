@@ -1,8 +1,8 @@
 ﻿public enum AccountType
 {
-    netflix,
-    twitter,
-    facebook,
-    paypal,
-    spotify
+    Netflix,
+    Twitter,
+    Facebook,
+    Paypal,
+    Spotify
 }
